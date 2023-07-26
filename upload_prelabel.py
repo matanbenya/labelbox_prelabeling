@@ -4,8 +4,7 @@ import uuid
 
 
 class UploadPrelabel:
-    def __init__(self):
-        API_KEY = r'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbGpvYnBlY2kwNHk0MDd5cTViNGIzMzAwIiwib3JnYW5pemF0aW9uSWQiOiJjbGQxdjY4cmMwZHV0MDcyNzg5bHgydGkxIiwiYXBpS2V5SWQiOiJjbGtpYWlrZXoxY2hsMDczZmdvemwyZ2JoIiwic2VjcmV0IjoiYzFjMWFhNDY0YjAxYWY4M2I2MDI1Y2JmZGUzZTM1MWQiLCJpYXQiOjE2OTAyODkxNDYsImV4cCI6MjMyMTQ0MTE0Nn0.fPe3UwQl3lvruxoE7BBw461o050S8zlJ0V1kvr3824I'
+    def __init__(self, API_KEY = None):
         self.client = lb.Client(API_KEY)
         project = self.client.get_project('cljvb348h00ef07xf2t4u3fah')
         self.project = project

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/labelbox.iml" filepath="$PROJECT_DIR$/.idea/labelbox.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/labelbox_prelabeling.iml" filepath="$PROJECT_DIR$/.idea/labelbox_prelabeling.iml" />
     </modules>
   </component>
 </project>
