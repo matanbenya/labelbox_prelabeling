@@ -1,0 +1,7 @@
+autodistill==0.1.6
+autodistill_grounded_sam==0.1.1
+autodistill_yolov8==0.1.1
+matplotlib==3.7.2
+numpy==1.24.3
+opencv_python==4.7.0.72
+pandas==2.0.1
