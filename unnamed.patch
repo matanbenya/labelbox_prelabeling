@@ -1,0 +1,383 @@
+Index: GroundedSam/GroundingDINO_SwinT_OGC.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/GroundedSam/GroundingDINO_SwinT_OGC.py b/GroundedSam/GroundingDINO_SwinT_OGC.py
+new file mode 100644
+--- /dev/null	(revision 3cb346615cc3be02725f04a001250db64435909f)
++++ b/GroundedSam/GroundingDINO_SwinT_OGC.py	(revision 3cb346615cc3be02725f04a001250db64435909f)
+@@ -0,0 +1,43 @@
++batch_size = 1
++modelname = "groundingdino"
++backbone = "swin_T_224_1k"
++position_embedding = "sine"
++pe_temperatureH = 20
++pe_temperatureW = 20
++return_interm_indices = [1, 2, 3]
++backbone_freeze_keywords = None
++enc_layers = 6
++dec_layers = 6
++pre_norm = False
++dim_feedforward = 2048
++hidden_dim = 256
++dropout = 0.0
++nheads = 8
++num_queries = 900
++query_dim = 4
++num_patterns = 0
++num_feature_levels = 4
++enc_n_points = 4
++dec_n_points = 4
++two_stage_type = "standard"
++two_stage_bbox_embed_share = False
++two_stage_class_embed_share = False
++transformer_activation = "relu"
++dec_pred_bbox_embed_share = True
++dn_box_noise_scale = 1.0
++dn_label_noise_ratio = 0.5
++dn_label_coef = 1.0
++dn_bbox_coef = 1.0
++embed_init_tgt = True
++dn_labelbook_size = 2000
++max_text_len = 256
++text_encoder_type = "bert-base-uncased"
++use_text_enhancer = True
++use_fusion_layer = True
++use_checkpoint = True
++use_transformer_ckpt = True
++use_text_cross_attention = True
++text_dropout = 0.0
++fusion_dropout = 0.0
++fusion_droppath = 0.1
++sub_sentence_present = True
+Index: dataset_retriever.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/dataset_retriever.py b/dataset_retriever.py
+--- a/dataset_retriever.py	(revision 73cad77bdf858896ebf6a5adb41f6b20c7c52b97)
++++ b/dataset_retriever.py	(revision 3cb346615cc3be02725f04a001250db64435909f)
+@@ -1,6 +1,8 @@
+ import json
+ import pandas as pd
+ 
++# This class acts on a json file created form the labelbox website with a list of all datarows to be pre labeled
++
+ class DatasetRetriever:
+     def __init__(self, json_path):
+         self.json_path = json_path
+Index: image_retriever.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/image_retriever.py b/image_retriever.py
+new file mode 100644
+--- /dev/null	(revision 3cb346615cc3be02725f04a001250db64435909f)
++++ b/image_retriever.py	(revision 3cb346615cc3be02725f04a001250db64435909f)
+@@ -0,0 +1,21 @@
++from google.cloud import storage
++import cv2
++import numpy as np
++
++class ImageLoader:
++    def __init__(self, project='ml-workspace-2', bucket_name='nanobebe_data'):
++        self.client = storage.Client(project=project)
++        self.bucket = self.client.get_bucket(bucket_name)
++
++
++    def __call__(self, url):
++        path = url.split('nanobebe_data/')[1].split('?')[0]
++        blob = self.bucket.blob(path)
++        # download the file
++        file = blob.download_as_string()
++        # read as jpeg
++        img = cv2.imdecode(np.fromstring(file, np.uint8), cv2.IMREAD_COLOR)
++        return img
++
++
++
+Index: main.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/main.py b/main.py
+--- a/main.py	(revision 73cad77bdf858896ebf6a5adb41f6b20c7c52b97)
++++ b/main.py	(revision 6ff71041f2dc628c74d9f6257cc096ad0ac66808)
+@@ -3,8 +3,8 @@
+ import pandas as pd
+ from dataset_retriever import DatasetRetriever
+ from upload_prelabel import UploadPrelabel
+-
+-
++from image_retriever import ImageLoader
++from annotator import GroundedSam
+ 
+ 
+ # Press the green button in the gutter to run the script.
+@@ -12,24 +12,26 @@
+ 
+     DATAROWS_JOSN_PATH = ''
+     classes = ['Covered Baby',...]
++    annotator = GroundedSam(classes = classes)
+ 
++    img_loader = ImageLoader(project='ml-workspace-2', bucket_name='nanobebe_data')
+     # get the dataset df
+     datarows_df = DatasetRetriever(DATAROWS_JOSN_PATH).get_df()
+-    # get the GRoundedSAM annotations
+-
+-    # for each file, annotation should contain len(classes) rows
+-    annotations_df = ...
+-    # merge the two dfs, so that each row in datarows_df has the corresponding annotation for each of the classes
+-    df = pd.merge(datarows_df, annotations_df, left_index=True, right_index=True)
+-
+-
+     uploader = UploadPrelabel()
+ 
+-    for index, row in df.iterrows():
++    status_df = pd.DataFrame(columns=['id', 'status'])
++    for index, row in datarows_df.iterrows():
+         # get the data row id
+         row_id = row['id']
+-        # get the annotation path
+-        annotation_path = row['annotation_path']
++
++        # load the image
++
++        # generate the annotation
++
+         # upload the pre label
+         for c in classes:
+             uploader(row_id=row_id, annotation_path=annotation_path, classname=c, type='segmentation')
++
++        # update the status df and save to csv
++        status_df = status_df.append({'id': row_id, 'status': 'uploaded'}, ignore_index=True)
++        status_df.to_csv('status.csv', index=False)
+Index: playground.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/playground.py b/playground.py
+--- a/playground.py	(revision 73cad77bdf858896ebf6a5adb41f6b20c7c52b97)
++++ b/playground.py	(revision 3cb346615cc3be02725f04a001250db64435909f)
+@@ -7,7 +7,7 @@
+ import cv2
+ 
+ 
+-API_KEY = None
++API_KEY =r'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbGpvYnBlY2kwNHk0MDd5cTViNGIzMzAwIiwib3JnYW5pemF0aW9uSWQiOiJjbGQxdjY4cmMwZHV0MDcyNzg5bHgydGkxIiwiYXBpS2V5SWQiOiJjbGtpYWlrZXoxY2hsMDczZmdvemwyZ2JoIiwic2VjcmV0IjoiYzFjMWFhNDY0YjAxYWY4M2I2MDI1Y2JmZGUzZTM1MWQiLCJpYXQiOjE2OTAyODkxNDYsImV4cCI6MjMyMTQ0MTE0Nn0.fPe3UwQl3lvruxoE7BBw461o050S8zlJ0V1kvr3824I'
+ client = lb.Client(API_KEY)
+ 
+ 
+@@ -83,4 +83,58 @@
+     labels=labels)
+ 
+ print(f"Errors: {upload_job.errors}", )
+-print(f"Status of uploads: {upload_job.statuses}")
+\ No newline at end of file
++print(f"Status of uploads: {upload_job.statuses}")
++
++
++
++
++# ================= Auto distill
++from autodistill_grounded_sam import GroundedSAM
++from autodistill_yolov8 import YOLOv8
++from autodistill.detection import CaptionOntology
++import cv2
++import numpy as np
++import matplotlib.pyplot as plt
++import urllib.request
++import numpy as np
++
++base_model = GroundedSAM(ontology=CaptionOntology({"blanket": "blanket", "baby": "baby"}))
++
++img = cv2.imread(r'/home/matanb/Downloads/index.jpeg')
++img = cv2.imread(r'/Users/matanb/Desktop/Screenshot 2023-05-04 at 9.21.15.png')
++img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
++res = base_model.predict(r'/Users/matanb/Desktop/Screenshot 2023-05-04 at 9.21.15.png')
++
++img_masked = img.copy()
++for mask in res.mask:
++    mask = mask.astype(np.uint8)
++    mask = cv2.cvtColor(255*mask, cv2.COLOR_GRAY2RGB)
++    img_masked = cv2.addWeighted(img_masked, 0.5, mask, 0.5, 0)
++plt.imshow(img_masked)
++plt.show()
++
++import time
++
++t = time.time()
++res = base_model.predict(r'/Users/matanb/Desktop/Screenshot 2023-05-04 at 9.21.15.png')
++print(time.time()-t)
++
++
++base_model.label("./context_images", extension=".jpeg")
++
++class Annotator:
++    def __init__(self, classes = {"blanket": "blanket", "baby": "baby"}):
++        base_model = GroundedSAM(ontology=CaptionOntology(classes))
++    def annotate(self, img_url, output_path = output_path):
++        import cv2
++        import numpy as np
++        import supervision as sv
++        from typing import List
++        import torch
++        import torchvision
++        import os
++        from groundingdino.util.inference import Model
++        from segment_anything import sam_model_registry, SamPredictor
++        import matplotlib.pyplot as plt
++
++# ================= Auto distill
+\ No newline at end of file
+Index: annotation_generator.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/annotation_generator.py b/annotator.py
+rename from annotation_generator.py
+rename to annotator.py
+--- a/annotation_generator.py	(revision 73cad77bdf858896ebf6a5adb41f6b20c7c52b97)
++++ b/annotator.py	(revision 66590a1aedd782c19f033f59e74c8a5719fff3c5)
+@@ -1,36 +1,110 @@
+-from autodistill_grounded_sam import GroundedSAM
+-from autodistill_yolov8 import YOLOv8
+-from autodistill.detection import CaptionOntology
+ import cv2
+ import numpy as np
++import supervision as sv
++from typing import List
++import torch
++import torchvision
++import os
++from groundingdino.util.inference import Model
++from segment_anything import sam_model_registry, SamPredictor
+ import matplotlib.pyplot as plt
+-import urllib.request
+-import numpy as np
++
++# # first mk weights dir
++# os.system(r'mkdir -p /GroundedSam')
++# os.system(r'!wget -q https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth')
++# download sam weights
++# os.system(r'!wget -q https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth'
++
++path = r'GroundedSam/GroundingDINO_SwinT_OGC.py'
++GROUNDING_DINO_CHECKPOINT_PATH = r'GroundedSam/groundingdino_swint_ogc.pth'
++# Segment-Anything checkpoint
++SAM_ENCODER_VERSION = "vit_h"
++SAM_CHECKPOINT_PATH = r'GroundedSam/sam_vit_h_4b8939.pth'
++DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
++grounding_dino_model = Model(
++    model_config_path=r'GroundedSam/GroundingDINO_SwinT_OGC.py',
++    model_checkpoint_path=GROUNDING_DINO_CHECKPOINT_PATH, device=DEVICE)
++# Building SAM Model and SAM Predictor
++sam = sam_model_registry[SAM_ENCODER_VERSION](checkpoint=SAM_CHECKPOINT_PATH)
++sam_predictor = SamPredictor(sam)
++
++def segment(sam_predictor: SamPredictor, image: np.ndarray, xyxy: np.ndarray) -> np.ndarray:
++    sam_predictor.set_image(image)
++    result_masks = []
++    for box in xyxy:
++        masks, scores, logits = sam_predictor.predict(
++            box=box,
++            multimask_output=True
++        )
++        index = np.argmax(scores)
++        result_masks.append(masks[index])
++    return np.array(result_masks)
++
++class GroundedSam:
++    def __init__(self, sam_predictor: SamPredictor, grounding_dino_model: Model, classes: List[str]):
++        self.sam_predictor = sam_predictor
++        self.grounding_dino_model = grounding_dino_model
++        self.classes = classes
+ 
+-base_model = GroundedSAM(ontology=CaptionOntology({"blanket": "blanket", "baby": "baby"}))
++    def predict(self, image: np.ndarray, box_threshold: float, text_threshold: float,
++                nms_threshold: float) -> np.ndarray:
++        # detect objects
++        detections = self.grounding_dino_model.predict_with_classes(
++            image=image,
++            classes=self.classes,
++            box_threshold=box_threshold,
++            text_threshold=text_threshold
++        )
++        # replace None with 0
++        detections.class_id[detections.class_id == None] = 0
+ 
+-img = cv2.imread(r'/home/matanb/Downloads/index.jpeg')
+-img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+-res = base_model.predict(r'/home/matanb/Downloads/index.jpeg')
++        nms = True
++        if nms:
++            # NMS post process
++            nms_idx = torchvision.ops.nms(
++                torch.from_numpy(detections.xyxy),
++                torch.from_numpy(detections.confidence),
++                nms_threshold
++            ).numpy().tolist()
+ 
+-img_masked = img.copy()
+-for mask in res.mask:
+-    mask = mask.astype(np.uint8)
+-    mask = cv2.cvtColor(255*mask, cv2.COLOR_GRAY2RGB)
+-    img_masked = cv2.addWeighted(img_masked, 0.5, mask, 0.5, 0)
+-plt.imshow(img_masked)
+-plt.show()
++            detections.xyxy = detections.xyxy[nms_idx]
++            detections.confidence = detections.confidence[nms_idx]
++            detections.class_id = detections.class_id[nms_idx]
+ 
+-import time
++        # convert detections to masks
++        detections.mask = segment(
++            sam_predictor=self.sam_predictor,
++            image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
++            xyxy=detections.xyxy
++        )
+ 
+-t = time.time()
+-res = base_model.predict(r'/home/matanb/Downloads/index.jpeg')
+-print(time.time()-t)
++        return detections
+ 
++    def predict_with_classes(self, image: np.ndarray, box_threshold: float, text_threshold: float,
++                             nms_threshold: float) -> np.ndarray:
++        detections = self.predict(image=image, box_threshold=box_threshold, text_threshold=text_threshold,
++                                  nms_threshold=nms_threshold)
++        # annotate image with detections
++        box_annotator = sv.BoxAnnotator()
++        mask_annotator = sv.MaskAnnotator()
++        labels = [
++            f"{self.classes[class_id]} {confidence:0.2f}"
++            for _, _, confidence, class_id, _
++            in detections]
++        annotated_image = mask_annotator.annotate(scene=image.copy(), detections=detections)
++        annotated_image = box_annotator.annotate(scene=annotated_image, detections=detections, labels=labels)
+ 
+-base_model.label("./context_images", extension=".jpeg")
++        return annotated_image
+ 
+-class Annotator:
+-    def __init__(self, classes = {"blanket": "blanket", "baby": "baby"}):
+-        base_model = GroundedSAM(ontology=CaptionOntology(classes))
+-    def annotate(self, img_url, output_path = output_path):
++    def save(self, img_path, detections):
++        # for each class, create a mask and save as a png  with the file name as the class name
++        for class_id in np.unique(detections.class_id):
++            # create a mask of the class
++            mask = detections.mask[detections.class_id == class_id].sum(axis=0)
++            # the image should be uint8 0-255
++            mask = (mask * 255).astype(np.uint8)
++            # save the mask
++            cv2.imwrite(os.path.join(img_path, self.classes[class_id] + ".png"), mask)
++        return True
++
++

@@ -107,4 +107,3 @@ class GroundedSam:
             cv2.imwrite(os.path.join(img_path, self.classes[class_id] + ".png"), mask)
         return True
 
-
