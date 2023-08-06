@@ -1,6 +1,8 @@
 import json
 import pandas as pd
 
+# This class acts on a json file created form the labelbox website with a list of all datarows to be pre labeled
+
 class DatasetRetriever:
     def __init__(self, json_path):
         self.json_path = json_path

@@ -7,7 +7,7 @@ import json
 import cv2
 
 
-API_KEY = None
+API_KEY =r'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbGpvYnBlY2kwNHk0MDd5cTViNGIzMzAwIiwib3JnYW5pemF0aW9uSWQiOiJjbGQxdjY4cmMwZHV0MDcyNzg5bHgydGkxIiwiYXBpS2V5SWQiOiJjbGtpYWlrZXoxY2hsMDczZmdvemwyZ2JoIiwic2VjcmV0IjoiYzFjMWFhNDY0YjAxYWY4M2I2MDI1Y2JmZGUzZTM1MWQiLCJpYXQiOjE2OTAyODkxNDYsImV4cCI6MjMyMTQ0MTE0Nn0.fPe3UwQl3lvruxoE7BBw461o050S8zlJ0V1kvr3824I'
 client = lb.Client(API_KEY)
 
 
@@ -84,3 +84,57 @@ upload_job = lb.LabelImport.create_from_objects(
 
 print(f"Errors: {upload_job.errors}", )
 print(f"Status of uploads: {upload_job.statuses}")
+
+
+
+
+# ================= Auto distill
+from autodistill_grounded_sam import GroundedSAM
+from autodistill_yolov8 import YOLOv8
+from autodistill.detection import CaptionOntology
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+import urllib.request
+import numpy as np
+
+base_model = GroundedSAM(ontology=CaptionOntology({"blanket": "blanket", "baby": "baby"}))
+
+img = cv2.imread(r'/home/matanb/Downloads/index.jpeg')
+img = cv2.imread(r'/Users/matanb/Desktop/Screenshot 2023-05-04 at 9.21.15.png')
+img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+res = base_model.predict(r'/Users/matanb/Desktop/Screenshot 2023-05-04 at 9.21.15.png')
+
+img_masked = img.copy()
+for mask in res.mask:
+    mask = mask.astype(np.uint8)
+    mask = cv2.cvtColor(255*mask, cv2.COLOR_GRAY2RGB)
+    img_masked = cv2.addWeighted(img_masked, 0.5, mask, 0.5, 0)
+plt.imshow(img_masked)
+plt.show()
+
+import time
+
+t = time.time()
+res = base_model.predict(r'/Users/matanb/Desktop/Screenshot 2023-05-04 at 9.21.15.png')
+print(time.time()-t)
+
+
+base_model.label("./context_images", extension=".jpeg")
+
+class Annotator:
+    def __init__(self, classes = {"blanket": "blanket", "baby": "baby"}):
+        base_model = GroundedSAM(ontology=CaptionOntology(classes))
+    def annotate(self, img_url, output_path = output_path):
+        import cv2
+        import numpy as np
+        import supervision as sv
+        from typing import List
+        import torch
+        import torchvision
+        import os
+        from groundingdino.util.inference import Model
+        from segment_anything import sam_model_registry, SamPredictor
+        import matplotlib.pyplot as plt
+
+# ================= Auto distill
