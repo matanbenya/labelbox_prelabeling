@@ -18,7 +18,7 @@ project = client.get_project('cljvb348h00ef07xf2t4u3fah')
 # get the dataset
 
 
-data_row = client.get_data_row(r'cld36xf2j53ms071p4pgn0ttq')
+data_row = client.get_data_row(r'cld36xf2v5480071p5qlf1vid')
 # assign global key
 global_key = str(uuid.uuid4())
 global_key_data_row_inputs = [
@@ -36,7 +36,7 @@ mask = np.zeros((height, width), dtype=np.uint8)
 
 # Identifying what values in the numpy array correspond to the mask annotation
 color = (255, 255, 255)
-mask_data = lb_types.MaskData(file_path="mask.png")
+mask_data = lb_types.MaskData(file_path="blanket0.png")
 
 # Python annotation
 mask_annotation = lb_types.ObjectAnnotation(
@@ -56,8 +56,7 @@ bbox_annotation = lb_types.ObjectAnnotation(
 
 labels = []
 annotations = [
-    mask_annotation,
-    bbox_annotation
+    mask_annotation
 ]
 labels.append(
     lb_types.Label(data=lb_types.ImageData(global_key=global_key),
@@ -112,29 +111,3 @@ for mask in res.mask:
     img_masked = cv2.addWeighted(img_masked, 0.5, mask, 0.5, 0)
 plt.imshow(img_masked)
 plt.show()
-
-import time
-
-t = time.time()
-res = base_model.predict(r'/Users/matanb/Desktop/Screenshot 2023-05-04 at 9.21.15.png')
-print(time.time()-t)
-
-
-base_model.label("./context_images", extension=".jpeg")
-
-class Annotator:
-    def __init__(self, classes = {"blanket": "blanket", "baby": "baby"}):
-        base_model = GroundedSAM(ontology=CaptionOntology(classes))
-    def annotate(self, img_url, output_path = output_path):
-        import cv2
-        import numpy as np
-        import supervision as sv
-        from typing import List
-        import torch
-        import torchvision
-        import os
-        from groundingdino.util.inference import Model
-        from segment_anything import sam_model_registry, SamPredictor
-        import matplotlib.pyplot as plt
-
-# ================= Auto distill

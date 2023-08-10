@@ -5,7 +5,7 @@
       <excludeFolder url="file://$MODULE_DIR$/venv" />
       <excludeFolder url="file://$MODULE_DIR$/venv2" />
     </content>
-    <orderEntry type="jdk" jdkName="past_py (4)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.9 virtualenv at ~/PycharmProjects/past_py/venv" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
