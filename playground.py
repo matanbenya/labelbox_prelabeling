@@ -101,7 +101,7 @@ base_model = GroundedSAM(ontology=CaptionOntology({"blanket": "blanket", "baby":
 
 img = cv2.imread(r'/home/matanb/Downloads/index.jpeg')
 img = cv2.imread(r'/Users/matanb/Desktop/Screenshot 2023-05-04 at 9.21.15.png')
-img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+img = cv2.cvtColor(img, cv2.COLOR_BGR2R)
 res = base_model.predict(r'/Users/matanb/Desktop/Screenshot 2023-05-04 at 9.21.15.png')
 
 img_masked = img.copy()
